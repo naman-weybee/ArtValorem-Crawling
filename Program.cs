@@ -1,4 +1,6 @@
-﻿using HtmlAgilityPack;
+﻿using ArtValorem_Crawling.Data;
+using HtmlAgilityPack;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using OpenQA.Selenium;
 using OpenQA.Selenium.Chrome;
@@ -10,6 +12,7 @@ namespace ArtValorem_Crawling
     {
         private const string Url = "http://www.artvalorem.fr/recherche?language=fr&query=&isvisible=&myGroup=1&advancedRecherche=on&actuDatefilter=&venteType=all&ordre=score&categorie=9";
         private const string BaseUrl = "http://www.artvalorem.fr";
+        private static readonly ArtValorem_DbContext _context = new();
 
         static void Main(string[] args)
         {
@@ -58,7 +61,7 @@ namespace ArtValorem_Crawling
             return driver.PageSource;
         }
 
-        private static void GetWatchDetails()
+        private static async void GetWatchDetails()
         {
             ChromeOptions opt = new();
             opt.AddArgument("--log-level=3");
@@ -95,8 +98,8 @@ namespace ArtValorem_Crawling
                             foreach (var auction in AllAuctionList)
                             {
                                 var auctionImageUrl = string.Empty;
+                                var auctionTitleString = string.Empty;
                                 var auctionTitle = string.Empty;
-                                var auctionDescriptionString = string.Empty;
                                 var auctionDescription = string.Empty;
                                 var lotNumber = string.Empty;
                                 var estimationPriceString = string.Empty;
@@ -107,24 +110,18 @@ namespace ArtValorem_Crawling
                                 var resultPrice = string.Empty;
                                 var resultPriceCurrency = string.Empty;
                                 var saleOfDateString = string.Empty;
-                                var saleStartMonthString = string.Empty;
-                                var saleStartDate = string.Empty;
-                                var saleStartMonth = string.Empty;
-                                var saleStartYear = string.Empty;
+                                var saleOfMonthString = string.Empty;
+                                var saleOfDate = string.Empty;
+                                var saleOfMonth = string.Empty;
+                                var saleOfYear = string.Empty;
                                 var auctionLink = string.Empty;
                                 var auctionId = string.Empty;
 
-                                auctionImageUrl = auction.SelectSingleNode(XpathStrings.AuctionImageUrlXpath)?.GetAttributes("src").First().Value.Replace("amp;", "") ?? string.Empty;
-                                auctionTitle = auction.SelectSingleNode(XpathStrings.AuctionTitleXpath)?.InnerText.Replace("\n", "").Replace("\r", "").Replace("&nbsp", "").Trim() ?? string.Empty;
-                                auctionDescriptionString = auction.SelectSingleNode(XpathStrings.AuctionDescriptionXpath)?.InnerHtml.Replace("\n", "").Replace("\r", "").Replace("&nbsp", "").Trim() ?? string.Empty;
                                 lotNumber = auction.SelectSingleNode(XpathStrings.LotCountXpath)?.InnerText.Replace("\n", "").Replace("\r", "").Replace("&nbsp", "").Trim() ?? string.Empty;
                                 estimationPriceString = auction.SelectSingleNode(XpathStrings.EstimationPriceXpath)?.InnerText.Replace("\n", "").Replace("\r", "").Replace("&nbsp", "").Trim() ?? string.Empty;
                                 resultPriceString = auction.SelectSingleNode(XpathStrings.ResultPriceXpath)?.InnerText.Replace("\n", "").Replace("\r", "").Replace("&nbsp", "").Trim() ?? string.Empty;
                                 saleOfDateString = auction.SelectSingleNode(XpathStrings.SaleOfDateXpath)?.InnerText.Replace("\n", "").Replace("\r", "").Replace("&nbsp", "").Trim() ?? string.Empty;
                                 auctionLink = BaseUrl + auction.SelectSingleNode(XpathStrings.AuctionLinkXpath)?.GetAttributes("href").First().Value ?? string.Empty;
-
-                                if (!string.IsNullOrEmpty(auctionDescriptionString))
-                                    auctionDescription = RegexString.AuctionDescriptionRegex.Match(auctionDescriptionString).Groups[1].Value.Trim() ?? string.Empty;
 
                                 if (!string.IsNullOrEmpty(estimationPriceString))
                                 {
@@ -141,20 +138,35 @@ namespace ArtValorem_Crawling
 
                                 if (!string.IsNullOrEmpty(saleOfDateString))
                                 {
-                                    saleStartDate = RegexString.SaleOfDateRegex.Match(saleOfDateString).Groups[1].Value ?? string.Empty;
-                                    saleStartMonthString = RegexString.SaleOfDateRegex.Match(saleOfDateString).Groups[3].Value ?? string.Empty;
-                                    saleStartYear = RegexString.SaleOfDateRegex.Match(saleOfDateString).Groups[5].Value ?? string.Empty;
+                                    saleOfDate = RegexString.SaleOfDateRegex.Match(saleOfDateString).Groups[1].Value ?? string.Empty;
+                                    saleOfMonthString = RegexString.SaleOfDateRegex.Match(saleOfDateString).Groups[3].Value ?? string.Empty;
+                                    saleOfYear = RegexString.SaleOfDateRegex.Match(saleOfDateString).Groups[5].Value ?? string.Empty;
 
-                                    if (!string.IsNullOrEmpty(saleStartMonthString))
-                                        saleStartMonth = Enum.GetName(typeof(NumberToMonth), Convert.ToInt32(saleStartMonthString)) ?? string.Empty;
+                                    if (!string.IsNullOrEmpty(saleOfMonthString))
+                                        saleOfMonth = Enum.GetName(typeof(NumberToMonth), Convert.ToInt32(saleOfMonthString)) ?? string.Empty;
                                 }
 
                                 if (!string.IsNullOrEmpty(auctionLink))
                                     auctionId = RegexString.AuctionIdRegex.Match(auctionLink).Groups[1].Value ?? string.Empty;
 
+                                driver.Navigate().GoToUrl(auctionLink);
+                                var lotDetailsPage = GetFullyLoadedWebPageContent(driver);
+                                var lotDetails = new HtmlDocument();
+                                lotDetails.LoadHtml(lotDetailsPage);
+
+                                auctionDescription = lotDetails.DocumentNode.SelectNodes(XpathStrings.AuctionDescriptionXpath)?.First().InnerText.Trim().Replace("\n", ", ").Replace("\r", "").Replace("&nbsp", "").Trim() ?? string.Empty;
+                                auctionTitleString = lotDetails.DocumentNode.SelectNodes(XpathStrings.AuctionTitleXpath)?.First().InnerText.Trim().Replace("\n", "").Replace("\r", "").Replace("&nbsp", "").Trim() ?? string.Empty;
+
+                                if (!string.IsNullOrEmpty(auctionTitleString))
+                                    auctionTitle = RegexString.AuctionTitleRegex.Match(auctionTitleString).Groups[1].Value.Replace("...", "").Replace("\n", "").Replace("\r", "").Replace("&nbsp", "") ?? string.Empty;
+
+                                driver.FindElement(By.XPath(XpathStrings.CatalogueInfoXpath)).Click();
+                                var catalogueDetailsPage = GetFullyLoadedWebPageContent(driver);
+                                var catalogueDetails = new HtmlDocument();
+                                catalogueDetails.LoadHtml(catalogueDetailsPage);
+
                                 Console.WriteLine($"----------Auction with Id = {auctionId}----------");
                                 Console.WriteLine($"Auction Title: {auctionTitle}");
-                                Console.WriteLine($"Auction Image Url: {auctionImageUrl}");
                                 Console.WriteLine($"Auction Description: {auctionDescription}");
                                 Console.WriteLine($"Auction Link: {auctionLink}");
                                 Console.WriteLine($"Lot Number: {lotNumber}");
@@ -163,9 +175,97 @@ namespace ArtValorem_Crawling
                                 Console.WriteLine($"Estimation Price Currency: {estimationPriceCurrency}");
                                 Console.WriteLine($"Result Price: {resultPrice}");
                                 Console.WriteLine($"Result Price Currency: {resultPriceCurrency}");
-                                Console.WriteLine($"Sale Start Date: {saleStartDate}");
-                                Console.WriteLine($"Sale Start Month: {saleStartMonth}");
-                                Console.WriteLine($"Sale Start Year: {saleStartYear}");
+                                Console.WriteLine($"Sale Of Date: {saleOfDate}");
+                                Console.WriteLine($"Sale Of Month: {saleOfMonth}");
+                                Console.WriteLine($"Sale Of Year: {saleOfYear}");
+                                Console.WriteLine();
+
+                                var auctionRecord = await _context.tbl_Auctions.Where(x => x.Id == auctionId).FirstOrDefaultAsync();
+                                if (auctionRecord != null)
+                                {
+                                    auctionRecord.Id = auctionId;
+                                    auctionRecord.Id = auctionId;
+                                    auctionRecord.Title = auctionTitle;
+                                    auctionRecord.Description = auctionDescription;
+                                    auctionRecord.Link = auctionLink;
+                                    auctionRecord.LotNumber = lotNumber;
+                                    auctionRecord.EstimationPriceStart = estimationPriceStart;
+                                    auctionRecord.EstimationPriceEnd = estimationPriceEnd;
+                                    auctionRecord.EstimationPriceCurrency = estimationPriceCurrency;
+                                    auctionRecord.ResultPrice = resultPrice;
+                                    auctionRecord.ResultPriceCurrency = resultPriceCurrency;
+                                    auctionRecord.SaleOfDate = saleOfDate;
+                                    auctionRecord.SaleOfMonth = saleOfMonth;
+                                    auctionRecord.SaleOfYear = saleOfYear;
+                                    _context.tbl_Auctions.Update(auctionRecord);
+                                }
+                                else
+                                {
+                                    Auctions newAuction = new()
+                                    {
+                                        Id = auctionId,
+                                        Title = auctionTitle,
+                                        Description = auctionDescription,
+                                        Link = auctionLink,
+                                        LotNumber = lotNumber,
+                                        EstimationPriceStart = estimationPriceStart,
+                                        EstimationPriceEnd = estimationPriceEnd,
+                                        EstimationPriceCurrency = estimationPriceCurrency,
+                                        ResultPrice = resultPrice,
+                                        ResultPriceCurrency = resultPriceCurrency,
+                                        SaleOfDate = saleOfDate,
+                                        SaleOfMonth = saleOfMonth,
+                                        SaleOfYear = saleOfYear
+                                    };
+                                    await _context.tbl_Auctions.AddAsync(newAuction);
+                                }
+
+                                var imageContainer = driver.FindElements(By.XPath(XpathStrings.AuctionImageContainerXpath));
+                                if (imageContainer != null)
+                                {
+                                    Console.WriteLine($"----------Lot Image with Auction Id = {auctionId}----------");
+                                    foreach (var image in imageContainer)
+                                    {
+                                        var img = string.Empty;
+                                        var imageUrl = string.Empty;
+
+                                        img = image.GetCssValue("background");
+                                        if (!string.IsNullOrEmpty(img))
+                                            imageUrl = RegexString.LotImageRegex.Match(img).Groups[2].Value ?? string.Empty;
+                                        Console.WriteLine(imageUrl);
+
+                                        var auctionImageRecord = await _context.tbl_Auction_Images.Where(x => x.AuctionId == auctionId).FirstOrDefaultAsync();
+                                        if (auctionImageRecord != null)
+                                        {
+                                            auctionImageRecord.Id = auctionImageRecord.Id;
+                                            auctionImageRecord.AuctionId = auctionId;
+                                            auctionImageRecord.ImageUrl = imageUrl;
+                                            _context.tbl_Auction_Images.Update(auctionImageRecord);
+                                        }
+                                        else
+                                        {
+                                            AuctionImages images = new()
+                                            {
+                                                AuctionId = auctionId,
+                                                ImageUrl = imageUrl
+                                            };
+                                            await _context.tbl_Auction_Images.AddAsync(images);
+                                        }
+                                    }
+                                    Console.WriteLine();
+                                }
+                                else
+                                {
+                                    Console.WriteLine($"No Images for Lot with Auction Id = {auctionId}----------");
+                                    Console.WriteLine();
+                                }
+                                driver.Navigate().Back();
+                                GetFullyLoadedWebPage(driver);
+                                await _context.SaveChangesAsync();
+                                Console.WriteLine();
+                                Console.WriteLine("=====================================================================================================================");
+                                Console.WriteLine($"Data Saved Successfully in Auctions and AuctionImages Tables with AuctionId = {auctionId}");
+                                Console.WriteLine("=====================================================================================================================");
                                 Console.WriteLine();
                             }
                         }
@@ -173,7 +273,12 @@ namespace ArtValorem_Crawling
                         count++;
                     } while (true);
                 }
-                catch (Exception) { Thread.Sleep(3000); }
+                catch (Exception)
+                {
+                    Console.WriteLine();
+                    Console.WriteLine("Data Saved Successfully in WatchAuctions and WatchDetails Tables...!");
+                    Console.WriteLine();
+                }
             }
             catch (Exception ex)
             {

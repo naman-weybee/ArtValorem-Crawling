@@ -9,11 +9,12 @@ namespace Phillips_Crawling_Task.Service
 {
     public class RegexString
     {
-        public static readonly Regex AuctionDescriptionRegex = new(@"</div>(.*)<br><br>", RegexOptions.IgnoreCase);
+        public static readonly Regex AuctionTitleRegex = new(@"(.*)(\s\-\s)lot", RegexOptions.IgnoreCase);
         public static readonly Regex EstimationPriceRegex = new(@"(\d+)(\s?\-?\s?)(\d+)?(\s?\-?\s?)(\w+)?", RegexOptions.IgnoreCase);
         public static readonly Regex ResultPriceRegex = new(@"(\d+)(\s?\-?\s?)(\w+)?", RegexOptions.IgnoreCase);
         public static readonly Regex SaleOfDateRegex = new(@"(\d+)?(\s?\-?\s?)(\d+)?(\s?\-?\s?)(\d{4})", RegexOptions.IgnoreCase);
         public static readonly Regex AuctionIdRegex = new(@"(\d+)", RegexOptions.IgnoreCase);
+        public static readonly Regex LotImageRegex = new(@"(""(.*)"")", RegexOptions.IgnoreCase);
     }
 
     public enum NumberToMonth
