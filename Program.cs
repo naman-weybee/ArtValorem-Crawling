@@ -117,10 +117,10 @@ namespace ArtValorem_Crawling
                                 var auctionLink = string.Empty;
                                 var auctionId = string.Empty;
 
-                                lotNumber = auction.SelectSingleNode(XpathStrings.LotCountXpath)?.InnerText.Replace("\n", "").Replace("\r", "").Replace("&nbsp", "").Trim() ?? string.Empty;
-                                estimationPriceString = auction.SelectSingleNode(XpathStrings.EstimationPriceXpath)?.InnerText.Replace("\n", "").Replace("\r", "").Replace("&nbsp", "").Trim() ?? string.Empty;
-                                resultPriceString = auction.SelectSingleNode(XpathStrings.ResultPriceXpath)?.InnerText.Replace("\n", "").Replace("\r", "").Replace("&nbsp", "").Trim() ?? string.Empty;
-                                saleOfDateString = auction.SelectSingleNode(XpathStrings.SaleOfDateXpath)?.InnerText.Replace("\n", "").Replace("\r", "").Replace("&nbsp", "").Trim() ?? string.Empty;
+                                lotNumber = auction.SelectSingleNode(XpathStrings.LotCountXpath)?.InnerText.Replace("\n", "").Replace("\r", "").Replace("&nbsp;", "").Trim() ?? string.Empty;
+                                estimationPriceString = auction.SelectSingleNode(XpathStrings.EstimationPriceXpath)?.InnerText.Replace("\n", "").Replace("\r", "").Replace("&nbsp;", "").Trim() ?? string.Empty;
+                                resultPriceString = auction.SelectSingleNode(XpathStrings.ResultPriceXpath)?.InnerText.Replace("\n", "").Replace("\r", "").Replace("&nbsp;", "").Trim() ?? string.Empty;
+                                saleOfDateString = auction.SelectSingleNode(XpathStrings.SaleOfDateXpath)?.InnerText.Replace("\n", "").Replace("\r", "").Replace("&nbsp;", "").Trim() ?? string.Empty;
                                 auctionLink = BaseUrl + auction.SelectSingleNode(XpathStrings.AuctionLinkXpath)?.GetAttributes("href").First().Value ?? string.Empty;
 
                                 if (!string.IsNullOrEmpty(estimationPriceString))
@@ -154,11 +154,11 @@ namespace ArtValorem_Crawling
                                 var lotDetails = new HtmlDocument();
                                 lotDetails.LoadHtml(lotDetailsPage);
 
-                                auctionDescription = lotDetails.DocumentNode.SelectNodes(XpathStrings.AuctionDescriptionXpath)?.First().InnerText.Trim().Replace("\n", ", ").Replace("\r", "").Replace("&nbsp", "").Replace(" ,", ",").Trim() ?? string.Empty;
-                                auctionTitleString = lotDetails.DocumentNode.SelectNodes(XpathStrings.AuctionTitleXpath)?.First().InnerText.Trim().Replace("\n", "").Replace("\r", "").Replace("&nbsp", "").Replace(" ,", ",").Trim() ?? string.Empty;
+                                auctionDescription = lotDetails.DocumentNode.SelectNodes(XpathStrings.AuctionDescriptionXpath)?.First().InnerText.Trim().Replace("\n", ", ").Replace("\r", "").Replace("&nbsp;", "").Replace(" ,", ",").Trim() ?? string.Empty;
+                                auctionTitleString = lotDetails.DocumentNode.SelectNodes(XpathStrings.AuctionTitleXpath)?.First().InnerText.Trim().Replace("\n", "").Replace("\r", "").Replace("&nbsp;", "").Replace(" ,", ",").Trim() ?? string.Empty;
 
                                 if (!string.IsNullOrEmpty(auctionTitleString))
-                                    auctionTitle = RegexString.AuctionTitleRegex.Match(auctionTitleString).Groups[1].Value.Replace("...", "").Replace("\n", "").Replace("\r", "").Replace("&nbsp", "").Replace(" ,", ",") ?? string.Empty;
+                                    auctionTitle = RegexString.AuctionTitleRegex.Match(auctionTitleString).Groups[1].Value.Replace("...", "").Replace("\n", "").Replace("\r", "").Replace("&nbsp;", "").Replace(" ,", ",") ?? string.Empty;
 
                                 driver.FindElement(By.XPath(XpathStrings.CatalogueInfoXpath)).Click();
                                 var catalogueDetailsPage = GetFullyLoadedWebPageContent(driver);
