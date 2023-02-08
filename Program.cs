@@ -154,11 +154,11 @@ namespace ArtValorem_Crawling
                                 var lotDetails = new HtmlDocument();
                                 lotDetails.LoadHtml(lotDetailsPage);
 
-                                auctionDescription = lotDetails.DocumentNode.SelectNodes(XpathStrings.AuctionDescriptionXpath)?.First().InnerText.Trim().Replace("\n", ", ").Replace("\r", "").Replace("&nbsp", "").Trim() ?? string.Empty;
-                                auctionTitleString = lotDetails.DocumentNode.SelectNodes(XpathStrings.AuctionTitleXpath)?.First().InnerText.Trim().Replace("\n", "").Replace("\r", "").Replace("&nbsp", "").Trim() ?? string.Empty;
+                                auctionDescription = lotDetails.DocumentNode.SelectNodes(XpathStrings.AuctionDescriptionXpath)?.First().InnerText.Trim().Replace("\n", ", ").Replace("\r", "").Replace("&nbsp", "").Replace(" ,", ",").Trim() ?? string.Empty;
+                                auctionTitleString = lotDetails.DocumentNode.SelectNodes(XpathStrings.AuctionTitleXpath)?.First().InnerText.Trim().Replace("\n", "").Replace("\r", "").Replace("&nbsp", "").Replace(" ,", ",").Trim() ?? string.Empty;
 
                                 if (!string.IsNullOrEmpty(auctionTitleString))
-                                    auctionTitle = RegexString.AuctionTitleRegex.Match(auctionTitleString).Groups[1].Value.Replace("...", "").Replace("\n", "").Replace("\r", "").Replace("&nbsp", "") ?? string.Empty;
+                                    auctionTitle = RegexString.AuctionTitleRegex.Match(auctionTitleString).Groups[1].Value.Replace("...", "").Replace("\n", "").Replace("\r", "").Replace("&nbsp", "").Replace(" ,", ",") ?? string.Empty;
 
                                 driver.FindElement(By.XPath(XpathStrings.CatalogueInfoXpath)).Click();
                                 var catalogueDetailsPage = GetFullyLoadedWebPageContent(driver);
